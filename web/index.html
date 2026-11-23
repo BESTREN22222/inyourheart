@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OTA监控工具</title>
+<link rel="stylesheet" href="/styles.css?v=11" />
+</head>
+<body>
+<header>
+  <b>OTA监控工具</b><span>INYOURHEART · 本地版 · 数据只在本机 · <span id="app-version">V3</span> <span id="js-status" class="js-status"></span></span>
+  <span class="grow"></span>
+  <a href="https://github.com/" target="_blank" rel="noreferrer">开源项目</a>
+</header>
+<main>
+  <nav id="nav">
+    <button type="button" data-tab="accounts" class="active">账号</button>
+    <button type="button" data-tab="pull">查评论</button>
+    <button type="button" data-tab="schedules">盯防</button>
+    <button type="button" data-tab="history">历史</button>
+    <button type="button" data-tab="settings">设置</button>
+  </nav>
+
+  <section id="tab-accounts">
+    <div class="card">
+      <h2>绑定你的微博账号</h2>
+      <div class="row">
+        <div>
+          <label>用哪种方式</label>
+          <select id="account-mode">
+            <option value="cli" selected>高级工具（推荐）</option>
+            <option value="direct">填授权码（只能查自己）</option>
+          </select>
+        </div>
+        <div>
+          <label>给这个账号起个名字（可不填）</label>
+          <input id="account-name" placeholder="例如：我的账号" />
+        </div>
+      </div>
+      <div id="token-wrap">
+        <label>微博授权码</label>
+        <input id="account-token" type="password" placeholder="从微博开放平台复制，只保存在这台电脑" />
+      </div>
+      <div class="actions">
+        <button type="button" class="primary" id="account-add">检查并保存</button>
+        <button type="button" class="ghost" id="cli-login">一键登录高级工具</button>
+        <button type="button" class="ghost" id="cli-check">检查高级工具是否已登录</button>
+      </div>
+      <div class="login-box" id="cli-login-box">
+        <p id="cli-login-text">点上面的「一键登录高级工具」开始</p>
+        <ol class="login-steps" id="cli-login-steps">
+          <li data-step="0">检查高级工具</li>
+          <li data-step="1">启动登录</li>
+          <li data-step="2">获取授权链接</li>
+          <li data-step="3">等待你在微博确认</li>
+          <li data-step="4">绑定账号</li>
+        </ol>
+        <a id="cli-login-link" class="login-button" target="_blank" rel="noreferrer" hidden>打开微博授权页面</a>
+        <div class="login-code" id="cli-login-code" hidden></div>
+        <pre id="cli-login-output" hidden></pre>
+        <div class="login-actions">
+          <button type="button" class="btn small" id="cli-login-copy" hidden>复制授权码</button>
+          <button type="button" class="btn small" id="cli-login-cancel">收起提示</button>
+        </div>
+      </div>
+      <div class="error" id="account-error" hidden></div>
+      <details class="guide">
+        <summary>第一次用？点这里看怎么连上微博</summary>
+        <ol>
+          <li><b>推荐：高级工具。</b>完整版已经内置 Node 和 weibo-cli，不用自己安装。</li>
+          <li>直接点上面的「一键登录高级工具」，网页会显示微博授权链接。</li>
+          <li>在浏览器里确认登录，网页会自动检测并绑定账号。</li>
+          <li>只有用源码版/轻量版时，才需要自己安装 Node.js 和 weibo-cli。</li>
+          <li>如果只想查自己，才用「填授权码」：去 open.weibo.com 创建应用，复制授权码。</li>
+        </ol>
+      </details>
+      <p class="muted" style="margin-top:12px">
+        完整版直接点「一键登录高级工具」即可；源码版才需要自己装 Node。
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>已绑定账号</h2>
+        <button type="button" class="ghost" id="refresh-balance">刷新余额</button>
+      </div>
+      <div id="account-list" class="muted">加载中…</div>
+      <div class="account-tools">
+        <a class="btn small ghost" href="https://open.weibo.com/cli/overview" target="_blank" rel="noreferrer">开放平台控制台</a>
+        <span class="muted">充值可以在这里</span>
+        <button type="button" class="btn small ghost" id="cli-logout">退出高级工具登录</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-pull" hidden>
+    <div class="card">
+      <h2>查评论</h2>
+      <div class="row">
+        <div>
+          <label>用哪个账号查</label>
+          <select id="pull-account"></select>
+        </div>
+        <div>
+          <label>查什么</label>
+          <select id="pull-source">
+            <option value="by_me_other">其他OTA&小偶像发出的评论</option>
+            <option value="to_me_other">其他OTA&小偶像收到的评论</option>
+            <option value="timeline_other">其他OTA&小偶像发出+收到的评论</option>
+            <option value="mentions_other">其他OTA&小偶像被@的评论</option>
+            <option value="user">其他OTA&小偶像的资料</option>
+            <option value="by_me">我发出去的评论</option>
+            <option value="to_me">其他OTA&小偶像给我的评论</option>
+            <option value="show">某条微博下的评论</option>
+            <option value="mentions">提到我的评论</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div id="uid-wrap">
+          <label>要查的微博号或主页链接</label>
+          <input id="pull-uid" placeholder="7117031969 或 https://weibo.com/u/7117031969" />
+        </div>
+        <div id="post-wrap" hidden>
+          <label>微博链接（或那串数字）</label>
+          <input id="pull-post" placeholder="https://weibo.com/xxx/status/xxxxx" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>怎么查</label>
+          <select id="pull-mode">
+            <option value="latest">只看最近的</option>
+            <option value="history">接着往更早查</option>
+            <option value="newer">看看有没有新的</option>
+            <option value="range">查某段时间</option>
+          </select>
+        </div>
+        <div>
+          <label>一次读几条</label>
+          <input id="pull-count" type="number" value="50" min="5" max="200" />
+        </div>
+        <div id="pages-wrap">
+          <label>最多往后翻几页</label>
+          <input id="pull-pages" type="number" value="1" min="1" max="20" />
+        </div>
+      </div>
+      <div class="row" id="date-wrap" hidden>
+        <div><label>从哪天开始</label><input id="pull-start-date" type="date" /></div>
+        <div><label>到哪天结束</label><input id="pull-end-date" type="date" /></div>
+      </div>
+      <p class="muted" id="mode-hint"></p>
+      <div class="row">
+        <div>
+          <label>只看谁发的（收到/微博评论时可用）</label>
+          <select id="pull-filter">
+            <option value="0">所有人</option>
+            <option value="1">我关注的人</option>
+            <option value="2">陌生人</option>
+          </select>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" class="primary" id="pull-start">开始犯罪</button>
+        <button type="button" class="ghost" id="pull-export">导出表格</button>
+      </div>
+      <div class="progress" id="pull-progress" hidden><i id="pull-bar"></i></div>
+      <div class="error" id="pull-error" hidden></div>
+    </div>
+
+    <div class="card">
+      <h2>结果 <span class="badge" id="result-count">0</span></h2>
+      <div id="result-list" class="muted">还没有拉取。</div>
+    </div>
+  </section>
+
+  <section id="tab-schedules" hidden>
+    <div class="card">
+      <h2>开始盯防</h2>
+      <div class="row">
+        <div><label>用哪个账号查</label><select id="schedule-account"></select></div>
+        <div>
+          <label>查什么</label>
+          <select id="schedule-source">
+            <option value="by_me_other">其他OTA&小偶像发出的评论</option>
+            <option value="to_me_other">其他OTA&小偶像收到的评论</option>
+            <option value="timeline_other">其他OTA&小偶像发出+收到的评论</option>
+            <option value="mentions_other">其他OTA&小偶像被@的评论</option>
+            <option value="by_me">我发出去的评论</option>
+            <option value="to_me">其他OTA&小偶像给我的评论</option>
+            <option value="mentions">提到我的评论</option>
+            <option value="show">某条微博下的评论</option>
+          </select>
+        </div>
+        <div><label>每隔多少分钟</label><input id="schedule-interval" type="number" value="60" min="1" /></div>
+      </div>
+      <div class="row">
+        <div><label>要查的微博号或主页链接</label><input id="schedule-uid" placeholder="7117031969 或 https://weibo.com/u/7117031969" /></div>
+        <div><label>微博链接（查某条微博时填）</label><input id="schedule-post" placeholder="可不填" /></div>
+        <div><label>一次读几条</label><input id="schedule-count" type="number" value="50" min="5" max="200" /></div>
+      </div>
+      <div class="actions">
+        <button type="button" class="primary" id="schedule-add">开始盯防</button>
+      </div>
+      <p class="muted" style="margin-top:10px">开启后，电脑会按你设的时间自动看看有没有新评论；没有新评论时基本不花钱。</p>
+    </div>
+
+    <div class="card">
+      <h2>正在盯防的任务</h2>
+      <div id="schedule-list" class="muted">加载中…</div>
+    </div>
+  </section>
+
+  <section id="tab-history" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2>查询历史</h2>
+        <button type="button" class="ghost" id="history-refresh">刷新</button>
+      </div>
+      <div id="history-list" class="muted">加载中…</div>
+    </div>
+  </section>
+
+  <section id="tab-settings" hidden>
+    <div class="card">
+      <h2>手机通知（ntfy）</h2>
+      <div class="row">
+        <div><label>要不要开</label>
+          <select id="ntfy-enabled"><option value="1">开启</option><option value="0">关闭</option></select>
+        </div>
+        <div><label>通知服务地址</label><input id="ntfy-server" placeholder="https://ntfy.sh" /></div>
+        <div><label>频道名</label><input id="ntfy-topic" placeholder="例如 inyourheart-abc123" /></div>
+      </div>
+      <div class="actions">
+        <button type="button" class="primary" id="ntfy-save">保存</button>
+        <button type="button" class="ghost" id="ntfy-test">发一条测试通知</button>
+      </div>
+      <p class="muted" style="margin-top:10px">手机装一个叫 ntfy 的 App，填同样的地址和频道名，就能收到通知。</p>
+    </div>
+  </section>
+</main>
+<div id="toast" class="toast" hidden></div>
+<script src="/app.js?v=11"></script>
+<script>
+(function () {
+  function bind() {
+    var button = document.getElementById('cli-login');
+    if (!button) return;
+    button.addEventListener('click', function () {
+      var box = document.getElementById('cli-login-box');
+      if (box) box.hidden = false;
+      var first = document.querySelector('#cli-login-steps li');
+      if (first && !document.querySelector('#cli-login-steps li.active')) {
+        first.classList.add('active');
+      }
+      if (typeof window.startCliLogin === 'function') {
+        window.startCliLogin();
+      } else {
+        var text = document.getElementById('cli-login-text');
+        if (text) text.textContent = '页面脚本没有加载，请按 Ctrl+F5 强制刷新';
+      }
+    });
+  }
+  if (document.readyState !== 'loading') bind();
+  else document.addEventListener('DOMContentLoaded', bind);
+
+  window.addEventListener('load', function () {
+    var status = document.getElementById('js-status');
+    if (!status) return;
+    status.textContent = typeof window.startCliLogin === 'function' ? '脚本就绪' : '脚本未加载';
+    status.classList.toggle('bad', typeof window.startCliLogin !== 'function');
+  });
+})();
+</script>
+</body>
+</html>
